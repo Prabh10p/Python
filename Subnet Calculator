@@ -1,0 +1,197 @@
+def decimal_to_binary(n):
+    binary = ""
+    while n > 0:
+        binary = str(n % 2) + binary
+        n = n // 2
+    while len(binary) < 8:
+        binary = '0' + binary
+    return binary
+
+def binary_to_decimal(binary_str):
+    decimal = 0
+    power = len(binary_str) - 1
+    for bit in binary_str:
+        decimal += int(bit) * (2 ** power)
+        power -= 1
+    return decimal
+
+def split_ip(ip):
+    return [int(octet) for octet in ip.split('.')]
+
+def ip_to_binary(ip):
+    binary_ip = ""
+    for octet in ip:
+        binary_ip += decimal_to_binary(octet) + '.'
+    return binary_ip[:-1]
+
+def binary_to_ip(binary_ip):
+    binary_octets = binary_ip.split('.')
+    ip = ""
+    for binary_octet in binary_octets:
+        ip += str(binary_to_decimal(binary_octet)) + '.'
+    return ip[:-1]
+
+def get_subnet_mask(network_bits):
+    mask = ""
+    for i in range(32):
+        if i < network_bits:
+            mask += '1'
+        else:
+            mask += '0'
+        if (i + 1) % 8 == 0 and i != 31:
+            mask += '.'
+    return mask
+
+def get_network_address(ip, subnet_mask):
+    ip_bin = ip_to_binary(ip)
+    subnet_mask_bin = ip_to_binary(split_ip(subnet_mask))
+    net_addr_bin = ""
+    for ip_octet, mask_octet in zip(ip_bin.split('.'), subnet_mask_bin.split('.')):
+        network_octet = ''
+        for ip_bit, mask_bit in zip(ip_octet, mask_octet):
+            network_octet += str(int(ip_bit) & int(mask_bit))
+        net_addr_bin += network_octet + '.'
+    return binary_to_ip(net_addr_bin[:-1])
+
+def get_broadcast_address(network_address, network_bits):
+    binary_network = ip_to_binary(split_ip(network_address))
+    broadcast_bin = ""
+    for i in range(35):
+        if binary_network[i] == '.':
+            broadcast_bin += '.'
+        elif i < network_bits + network_bits // 8:
+            broadcast_bin += binary_network[i]
+        else:
+            broadcast_bin += '1'
+
+    return binary_to_ip(broadcast_bin)
+
+
+def calculate_hosts(network_bits):
+    return (2 ** (32 - network_bits))
+
+def get_first_usable_ip(network_address):
+    ip = split_ip(network_address)
+    ip[-1] += 1
+    return '.'.join(str(octet) for octet in ip)
+
+
+def get_last_usable_ip(broadcast_address):
+    ip = split_ip(broadcast_address)
+    ip[-1] -= 1
+    return '.'.join(str(octet) for octet in ip)
+
+def ip_class(ip):
+    first_octet = int(ip[0])
+    if 1 <= first_octet <= 126:
+        return 'Class A'
+    elif 128 <= first_octet <= 191:
+        return 'Class B'
+    elif 192 <= first_octet <= 223:
+        return 'Class C'
+    elif 224 <= first_octet <= 239:
+        return 'Class D (Multicast)'
+    elif 240 <= first_octet <= 255:
+        return 'Class E (Experimental)'
+    else:
+        return 'Invalid IP'
+
+def private_status(ip):
+    first_octet = ip[0]
+    if first_octet == 10:
+        return True
+    elif first_octet == 172 and 16 <= ip[1] <= 31:
+        return True
+    elif first_octet == 192 and ip[1] == 168:
+        return True
+    return False
+
+def get_original_network_bits(ip_class):
+    if ip_class == 'Class A':
+        return 8
+    elif ip_class == 'Class B':
+        return 16
+    elif ip_class == 'Class C':
+        return 24
+    else:
+        raise ValueError("Invalid IP class for subnetting calculation.")
+
+
+def calculate_subnets(network_bits, original_network_bits):
+    borrowed_host_bits = network_bits - original_network_bits
+    return 2 ** borrowed_host_bits
+
+
+def parse_cidr(cidr_notation):
+    if '/' not in cidr_notation:
+        raise ValueError("Invalid CIDR notation. Please include '/' and network_bits.")
+    ip_address, network_bits = cidr_notation.split('/')
+    return ip_address, int(network_bits)
+
+
+def subnet_calculator():
+    while True:
+        try:
+
+            method = input("Choose input method:\n1. CIDR notation (e.g., 192.168.1.1/24)\n2. IP and Subnet Mask (e.g., 192.168.1.1 and 255.255.255.0)\nEnter 1 or 2: ")
+            if method == '1':
+                cidr_input = input("Enter IP address in CIDR notation (e.g., 192.168.1.1/24): ")
+                ip_address, network_bits = parse_cidr(cidr_input)
+                ip = split_ip(ip_address)
+                subnet_mask_bin = get_subnet_mask(network_bits)
+                subnet_mask = binary_to_ip(subnet_mask_bin)
+            elif method == '2':
+                ip_address = input("Enter IP address (e.g., 192.168.1.1): ")
+                subnet_mask_input = input("Enter Subnet Mask (e.g., 255.255.255.0): ")
+                ip = split_ip(ip_address)
+                subnet_mask = subnet_mask_input
+                network_bits = sum(bin(int(octet)).count('1') for octet in subnet_mask.split('.'))
+            else:
+                print("Invalid selection. Please enter 1 or 2.")
+                continue
+
+
+            if not all(0 <= octet <= 255 for octet in split_ip(ip_address)):
+                raise ValueError("Invalid IP address. Octets must be between 0 and 255.")
+            if not all(0 <= octet <= 255 for octet in split_ip(subnet_mask)):
+                raise ValueError("Invalid subnet mask. Octets must be between 0 and 255.")
+
+
+            network_address = get_network_address(ip, subnet_mask)
+            broadcast_address = get_broadcast_address(network_address, network_bits)
+            first_usable_ip = get_first_usable_ip(network_address)
+            last_usable_ip = get_last_usable_ip(broadcast_address)
+            num_hosts = calculate_hosts(network_bits)
+            ip_class_info = ip_class(ip)
+            status = "Private IP" if private_status(ip) else "Public IP"
+            original_network_bits = get_original_network_bits(ip_class_info)
+            num_subnets = calculate_subnets(network_bits,original_network_bits)
+
+
+            print("\n===== Subnet Calculator Results =====")
+            print(f"IP Address: {ip_address}")
+            print(f"Subnet Mask: {subnet_mask}")
+            print(f"Network Bits: {network_bits}")
+            print(f"CIDR Notation: {ip_address}/{network_bits}")
+            print(f"IP Class: {ip_class_info}")
+            print(f"Network Address: {network_address}")
+            print(f"Host Range:{first_usable_ip}-{last_usable_ip}")
+            print(f"First Usable IP: {first_usable_ip}")
+            print(f"Last Usable IP: {last_usable_ip}")
+            print(f"Broadcast Address: {broadcast_address}")
+            print(f"Total Hosts: {num_hosts}")
+            print(f"Number of Subnets: {num_subnets}")
+            print(f"Number of Usable Hosts:{num_hosts-2}")
+            print(f"IP Status: {status}")
+            print("======================================")
+            break
+
+        except ValueError as e:
+            print(f"Error: {e}. Please try again.")
+        except IndexError as e:
+            print(f"Index Error: {e}. Please check your inputs.")
+        except TypeError as e:
+            print(f"Type Error: {e}. Please check your inputs.")
+
+
+subnet_calculator()
