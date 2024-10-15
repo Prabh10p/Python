@@ -1,0 +1,20 @@
+from pyftpdlib.authorizers import DummyAuthorizer
+from pyftpdlib.handlers import FTPHandler
+from pyftpdlib.servers import FTPServer
+
+# Create an authorizer object
+authorizer = DummyAuthorizer()
+
+# Add a user with username 'kali', password 'password'
+# Change '/home/kali' to your desired directory
+authorizer.add_user('kali', 'password', '/home/kali', perm='elradfmwMT')
+
+# Create an FTP handler and attach the authorizer
+handler = FTPHandler
+handler.authorizer = authorizer
+
+# Specify the address and port to listen on
+server = FTPServer(('0.0.0.0', 21), handler)
+
+# Start the server
+server.serve_forever()
