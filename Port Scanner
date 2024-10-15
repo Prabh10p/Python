@@ -1,0 +1,84 @@
+import socket
+from concurrent.futures import ThreadPoolExecutor
+import netifaces
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+
+def get_local_ip(interface='wlan0'):
+    try:
+        addresses = netifaces.ifaddresses(interface)
+        ipv4_info = addresses.get(netifaces.AF_INET)
+        if ipv4_info:
+            return ipv4_info[0]['addr']
+        else:
+            print(f"No IPv4 address found for interface {interface}.")
+            return None
+    except ValueError:
+        print(f"Interface {interface} not found.")
+        return None
+
+def get_service_name(port):
+    try:
+        return socket.getservbyport(port)
+    except OSError:
+        return "Unknown Service"
+
+def scan_port(ip, port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(1)
+        try:
+            s.connect((ip, port))
+            return port, True
+        except (socket.timeout, socket.error) as e:
+            logging.warning(f"Error connecting to port {port}: {e}")
+            return port, False
+
+def probe_service(ip, port):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            s.connect((ip, port))
+            if port == 80:  # HTTP
+                request = f"GET / HTTP/1.1\r\nHost: {ip}\r\nConnection: close\r\n\r\n"
+                s.sendall(request.encode())
+                response = s.recv(1024)
+                return response.decode('utf-8', errors='ignore')
+            elif port == 443:  # HTTPS
+                return "HTTPS service detected (no response shown)."
+            # You can add more cases for different ports/protocols
+            return "Service probe successful."
+    except Exception as e:
+        return f"Failed to probe service: {e}"
+
+def scan_ports(ip, start_port, end_port):
+    open_ports = []
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        future_to_port = {executor.submit(scan_port, ip, port): port for port in range(start_port, end_port + 1)}
+        for future in future_to_port:
+            port, is_open = future.result()
+            if is_open:
+                service_name = get_service_name(port)
+                open_ports.append(port)
+                print(f"Port {port} is open (Service: {service_name})")
+                service_info = probe_service(ip, port)
+                print(f"Service info on port {port}: {service_info}")
+    return open_ports
+
+def print_summary(open_ports):
+    print(f"Total open ports found: {len(open_ports)}")
+    print("Open ports list:")
+    for port in open_ports:
+        print(port)
+
+if __name__ == "__main__":
+    local_ip = get_local_ip()
+    if local_ip:
+        print(f"Local IP on wlan0 is {local_ip}.")
+        target_ip = input("Enter the IP address to scan: ")
+        start_port = int(input("Enter the starting port number (default 1): ") or 1)
+        end_port = int(input("Enter the ending port number (default 65535): ") or 65535)
+        print(f"Scanning {target_ip} for open ports from {start_port} to {end_port}...")
+        open_ports = scan_ports(target_ip, start_port, end_port)
+        print_summary(open_ports)
