@@ -1,0 +1,81 @@
+from scapy.all import *
+
+def pktPrint(pkt):
+   if pkt.haslayer(Ether):
+    src_mac = pkt[Ether].src
+    dst_mac = pkt[Ether].dst
+    print(f"[+] Source MAC: {src_mac}")
+    print(f"[+] Destination MAC: {dst_mac}")
+    if pkt.haslayer(Dot11Beacon):
+        print("[+] Detected 802.11 Beacon Frame")
+    elif pkt.haslayer(Dot11ProbeReq):
+        print("[+] Detected 802.11 Probe Request Frame")
+    elif pkt.haslayer(TCP):
+        print("[+] Detected a TCP Packet")
+    elif pkt.haslayer(UDP):
+        print("[+] Detected a UDP Packet")
+    elif pkt.haslayer(DNS):
+        print("[+] Detected a DNS Packet")
+    elif pkt.haslayer(ICMP):
+        print("[+] Detected an ICMP Packet")
+    elif pkt.haslayer(IP):
+        print("[+] Detected an IP Packet")
+    elif pkt.haslayer(ARP):
+        print("[+] Detected an ARP Packet")
+    elif pkt.haslayer(IPv6):
+        print("[+] Detected an IPv6 Packet")
+    elif pkt.haslayer(HTTPS):
+        print("[+] Detected an HTTPS Packet")
+    elif pkt.haslayer(Raw):
+        print("[+] Detected a Raw Packet")
+    elif pkt.haslayer(LLC):
+        print("[+] Detected an LLC Packet")
+    elif pkt.haslayer(Dot1Q):
+        print("[+] Detected a VLAN Packet")
+    elif pkt.haslayer(SCTP):
+        print("[+] Detected an SCTP Packet")
+    elif pkt.haslayer(IGMP):
+        print("[+] Detected an IGMP Packet")
+    elif pkt.haslayer(RARP):
+        print("[+] Detected a RARP Packet")
+    elif pkt.haslayer(DDP):
+        print("[+] Detected a DDP Packet")
+    elif pkt.haslayer(POP3):
+        print("[+] Detected a POP3 Packet")
+    elif pkt.haslayer(IMAP):
+        print("[+] Detected an IMAP Packet")
+    elif pkt.haslayer(SNMP):
+        print("[+] Detected an SNMP Packet")
+    elif pkt.haslayer(ESP):
+        print("[+] Detected an ESP Packet")
+    elif pkt.haslayer(AH):
+        print("[+] Detected an AH Packet")
+    elif pkt.haslayer(PPP):
+        print("[+] Detected a PPP Packet")
+    elif pkt.haslayer(PPTP):
+        print("[+] Detected a PPTP Packet")
+    elif pkt.haslayer(VTP):
+        print("[+] Detected a VTP Packet")
+    elif pkt.haslayer(TFTP):
+        print("[+] Detected a TFTP Packet")
+    elif pkt.haslayer(NTP):
+        print("[+] Detected an NTP Packet")
+    elif pkt.haslayer(MDNS):
+        print("[+] Detected an mDNS Packet")
+    elif pkt.haslayer(RTP):
+        print("[+] Detected an RTP Packet")
+    elif pkt.haslayer(LLDP):
+        print("[+] Detected an LLDP Packet")
+    elif pkt.haslayer(CDP):
+        print("[+] Detected a CDP Packet")
+    else:
+        print("[+] Detected an Unknown Packet")
+
+def start_sniffing(interface, packet_count):
+    print(f"[*] Starting packet capture on interface {interface}...")
+    sniff(iface=interface, count=packet_count, prn=pktPrint)
+
+if __name__ == "__main__":
+    iface = 'wlan0'  # Replace with your network interface
+    packet_count = 250  # Number of packets to capture
+    start_sniffing(iface, packet_count)
